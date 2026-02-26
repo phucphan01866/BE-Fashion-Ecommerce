@@ -81,6 +81,11 @@ app.use('/public', require('./routes/publicRoutes'));
 app.use('/payment', paymentsRoutes);
 app.use('/gemini', aiGeminiRoutes);
 
+// FE test route
+app.get('/test', (req, res) => {
+  res.json({ message: 'BE APIs is working!' });
+});
+
 // global rate limiter
 // const globalLimiter = rateLimit({
 //   windowMs: 60*1000,
