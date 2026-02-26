@@ -86,6 +86,16 @@ app.get('/test', (req, res) => {
   res.json({ message: 'BE APIs is working!' });
 });
 
+app.get('/test-db', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT NOW()');
+    res.json({ dbTime: result.rows[0].now });
+  } catch (err) {
+    console.error('Database connection test failed:', err);
+    res.status(500).json({ error: 'Database connection failed' });
+  }
+});
+
 // global rate limiter
 // const globalLimiter = rateLimit({
 //   windowMs: 60*1000,
