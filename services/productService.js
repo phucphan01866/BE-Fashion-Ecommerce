@@ -123,9 +123,7 @@ exports.getProducts = async function ({
             params.push(Number(cursor));
             sql = `SELECT * FROM v_product_full p WHERE ${where.join(' AND ')} ORDER BY ${orderBy} LIMIT $${idx++}`;
             params.push(limitPlus);
-            
         } else if (page && Number.isFinite(Number(page))) {
-            
             const pg = Math.max(1, Number(page));
             const offset = (pg - 1) * Number(limit);
             sql = `SELECT * FROM v_product_full p WHERE ${where.join(' AND ')} ORDER BY ${orderBy} LIMIT $${idx++} OFFSET $${idx++}`;

@@ -4,17 +4,15 @@ const cors = require('cors');
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const userRoutes = require('./routes/userRoutes');
-const aiGeminiRoutes = require('./routes/aiGeminiRoutes');
 const paymentsRoutes = require('./routes/paymentsRoutes');
 const errorHandler = require('./utils/errorHandler');
 const passport = require('./config/passport');
-
-// const cron = require('node-cron');
+const cron = require('node-cron');
 const promotionService = require('./services/promotionServices');
 const orderNotificationService = require('./services/orderNotificationService');
 const { cleanupExpiredRefreshTokens } = require('./cleanupRefreshTokens');
 const rateLimit = require('express-rate-limit');
-// const aiChatRoutes = require('./routes/aiChatRoutes');
+const aiChatRoutes = require('./routes/aiChatRoutes');
 const { authMiddleware } = require('./middleware/authMiddleware');
 
 const pool = require('./config/db');
@@ -79,7 +77,7 @@ app.use('/admin', adminRoutes);
 app.use('/user', userRoutes);
 app.use('/public', require('./routes/publicRoutes'));
 app.use('/payment', paymentsRoutes);
-app.use('/gemini', aiGeminiRoutes);
+app.use('/api', aiChatRoutes);
 
 // FE test route
 app.get('/test', (req, res) => {
@@ -97,88 +95,95 @@ app.get('/test-db', async (req, res) => {
 });
 
 // global rate limiter
-// const globalLimiter = rateLimit({
-//   windowMs: 60*1000,
-//   max: 200,
-//   standardHeaders: true,
-//   legacyHeaders: false,
-//   message: 'Quá nhiều yêu cầu từ địa chỉ IP này, vui lòng thử lại sau một phút.'
-// });
-// app.use(globalLimiter);
+const globalLimiter = rateLimit({
+  windowMs: 60*1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Quá nhiều yêu cầu từ địa chỉ IP này, vui lòng thử lại sau một phút.'
+});
+app.use(globalLimiter);
 
 // Error handling (last)
 app.use(errorHandler);
 
 // Cron jobs
-// cron.schedule('0 0 * * *', () => {
-//   (async () => {
-//     try {
-//       const n = await cleanupExpiredRefreshTokens();
-//       if (typeof n === 'number') console.log(`Cleaned up ${n} expired refresh tokens`);
-//     } catch (err) {
-//       console.error('cron cleanupExpiredRefreshTokens error:', err && err.stack ? err.stack : err);
-//     }
-//   })();
-// });
+cron.schedule('0 0 * * *', () => {
+  (async () => {
+    try {
+      const n = await cleanupExpiredRefreshTokens();
+      if (typeof n === 'number') console.log(`Cleaned up ${n} expired refresh tokens`);
+    } catch (err) {
+      console.error('cron cleanupExpiredRefreshTokens error:', err && err.stack ? err.stack : err);
+    }
+  })();
+});
 
-// cron.schedule('*/5 * * * *', async () => {
-//   try {
-//     const n = await promotionService.expirePromotions();
-//     if (n > 0) console.log(`Expired ${n} promotions`);
-//   } catch (err) {
-//     console.error('cron expirePromotions error:', err && err.stack ? err.stack : err);
-//   }
-// });
+cron.schedule('*/5 * * * *', async () => {
+  try {
+    const n = await promotionService.expirePromotions();
+    if (n > 0) console.log(`Expired ${n} promotions`);
+  } catch (err) {
+    console.error('cron expirePromotions error:', err && err.stack ? err.stack : err);
+  }
+});
 
-// cron.schedule('0 */1 * * *', async () => {
-//   try { await pool.query('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_revenue_by_week'); }
-//   catch (e) { console.error('refresh mv_revenue_by_week failed', e); }
-// });
+cron.schedule('0 */1 * * *', async () => {
+  try { await pool.query('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_revenue_by_week'); }
+  catch (e) { console.error('refresh mv_revenue_by_week failed', e); }
+});
 
-// cron.schedule('*/5 * * * *', async () => {
-//   try {
-//     console.log('[cron] checkAndSendForDeliveredOrders start');
-//     await orderNotificationService.checkAndSendForDeliveredOrders(100);
-//     console.log('[cron] checkAndSendForDeliveredOrders done');
-//   } catch (e) {
-//     console.error('[cron] checkAndSendForDeliveredOrders error', e && e.stack ? e.stack : e);
-//   }
-// });
+cron.schedule('*/5 * * * *', async () => {
+  try {
+    console.log('[cron] checkAndSendForDeliveredOrders start');
+    await orderNotificationService.checkAndSendForDeliveredOrders(100);
+    console.log('[cron] checkAndSendForDeliveredOrders done');
+  } catch (e) {
+    console.error('[cron] checkAndSendForDeliveredOrders error', e && e.stack ? e.stack : e);
+  }
+});
 
-// async function cleanupOldAiData() {
-//   const client = await pool.connect();
-//   try {
-//     // retention config: sessions/messages older than 90 days; recommendations older than 365 days
-//     await client.query('BEGIN');
-//     await client.query(
-//       `DELETE FROM ai_chat_messages
-//        WHERE created_at < NOW() - INTERVAL '90 days'`
-//     );
-//     await client.query(
-//       `DELETE FROM ai_chat_sessions
-//        WHERE last_message_at < NOW() - INTERVAL '90 days'`
-//     );
-//     await client.query(
-//       `DELETE FROM ai_recommendations
-//        WHERE created_at < NOW() - INTERVAL '365 days'`
-//     );
-//     await client.query('COMMIT');
-//     console.log('[cleanupOldAiData] completed');
-//   } catch (err) {
-//     await client.query('ROLLBACK');
-//     console.error('[cleanupOldAiData] error', err && err.stack ? err.stack : err);
-//   } finally {
-//     client.release();
-//   }
-// }
+async function cleanupOldAiData() {
+  const client = await pool.connect();
+  try {
+    // retention config: sessions/messages older than 90 days; recommendations older than 365 days
+    await client.query('BEGIN');
+    await client.query(
+      `DELETE FROM ai_chat_messages
+       WHERE created_at < NOW() - INTERVAL '90 days'`
+    );
+    await client.query(
+      `DELETE FROM ai_chat_sessions
+       WHERE last_message_at < NOW() - INTERVAL '90 days'`
+    );
+    await client.query(
+      `DELETE FROM ai_recommendations
+       WHERE created_at < NOW() - INTERVAL '365 days'`
+    );
+    await client.query('COMMIT');
+    console.log('[cleanupOldAiData] completed');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('[cleanupOldAiData] error', err && err.stack ? err.stack : err);
+  } finally {
+    client.release();
+  }
+}
 
 // Example: run daily at 03:30
-// cron.schedule('30 3 * * *', () => {
-//   cleanupOldAiData().catch(err => console.error('cleanup job failed', err));
-// });
+cron.schedule('30 3 * * *', () => {
+  cleanupOldAiData().catch(err => console.error('cleanup job failed', err));
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
+// cors
+app.use(cors({
+  origin: process.env.FRONTEND_URL,
+  credentials: true,                       // nếu dùng cookie / Authorization header
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
