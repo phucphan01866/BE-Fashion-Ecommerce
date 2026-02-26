@@ -150,7 +150,7 @@ exports.getProducts = async function ({
             const lastKey = (sort_by === 'price') ? 'final_price' : 'sequence_id';
             nextCursor = products[products.length - 1][lastKey] ?? null;
         }
-
+        
         return {
             products,
             nextCursor,

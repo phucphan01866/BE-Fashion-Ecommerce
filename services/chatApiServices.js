@@ -33,7 +33,7 @@ exports.chatApi = async (chatContent, responseID = null) => {
         const response = await ai.models.generateContent({
             apiKey: process.env.GOOGLE_API_KEY,
             model: "gemini-3-flash-preview",
-            contents: chatContent,
+            contents: "Hãy trả lời promt sau bằng tiếng Việt: \n" + chatContent,
             tools: [searchMatchingOutfit],
         });
         return {
