@@ -182,7 +182,7 @@ app.listen(PORT, () => {
 
 // cors
 app.use(cors({
-  origin: process.env.FRONTEND_URL,
+  origin: "*",
   credentials: true,                       // nếu dùng cookie / Authorization header
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
