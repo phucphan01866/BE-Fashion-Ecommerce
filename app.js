@@ -12,7 +12,7 @@ const promotionService = require('./services/promotionServices');
 const orderNotificationService = require('./services/orderNotificationService');
 const { cleanupExpiredRefreshTokens } = require('./cleanupRefreshTokens');
 const rateLimit = require('express-rate-limit');
-const aiChatRoutes = require('./routes/aiChatRoutes');
+// const aiChatRoutes = require('./routes/aiChatRoutes');
 const { authMiddleware } = require('./middleware/authMiddleware');
 
 const pool = require('./config/db');
@@ -77,7 +77,7 @@ app.use('/admin', adminRoutes);
 app.use('/user', userRoutes);
 app.use('/public', require('./routes/publicRoutes'));
 app.use('/payment', paymentsRoutes);
-app.use('/api', aiChatRoutes);
+// app.use('/api', aiChatRoutes);
 
 // FE test route
 app.get('/test', (req, res) => {
@@ -96,7 +96,7 @@ app.get('/test-db', async (req, res) => {
 
 // global rate limiter
 const globalLimiter = rateLimit({
-  windowMs: 60*1000,
+  windowMs: 60 * 1000,
   max: 200,
   standardHeaders: true,
   legacyHeaders: false,
