@@ -78,6 +78,7 @@ app.use('/user', userRoutes);
 app.use('/public', require('./routes/publicRoutes'));
 app.use('/payment', paymentsRoutes);
 // app.use('/api', aiChatRoutes);
+app.use('/gemini', require('./routes/gemini_chat_routes'));
 
 // FE test route
 app.get('/test', (req, res) => {
@@ -142,6 +143,26 @@ cron.schedule('*/5 * * * *', async () => {
     console.error('[cron] checkAndSendForDeliveredOrders error', e && e.stack ? e.stack : e);
   }
 });
+
+cron.schedule('0 */1 * * *', async () => {
+  try {
+    await cleanupGuestSessions();
+  } catch (e) {
+    console.error('cron cleanupGuestSessions error', e && e.stack ? e.stack : e);
+  }
+})
+
+async function cleanupGuestSessions() {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `DELETE FROM gemini_guest_sessions WHERE created_at < NOW() - INTERVAL '1 hour'`
+    );
+    console.log(`[cleanupGuestSessions] deleted ${result.rowCount} guest sessions`);
+  } finally {
+    client.release();
+  }
+}
 
 async function cleanupOldAiData() {
   const client = await pool.connect();
